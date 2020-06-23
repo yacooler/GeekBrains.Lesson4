@@ -20,13 +20,21 @@ public class TicTacToe {
 
         Scanner scanner = new Scanner(System.in);
 
-
         selectPlayers(isHumanPlayer, scanner);
 
         char[][] field = new char[FIELD_SIZE][FIELD_SIZE];
         clearField(field, CELLTYPE_EMPTY);
 
+//        char[][] field = {
+//                {'X','X','X','x','X'},
+//                {'.','X','x','X','X'},
+//                {'.','x','x','X','X'},
+//                {'.','x','X','X','X'},
+//                {'.','X','X','X','X'}};
+
         drawField(field);
+
+        System.out.println(checkWin(field,'.',4));
 
     }
 
@@ -123,6 +131,7 @@ public class TicTacToe {
      */
     public static boolean checkWin(char[][] field, char checkingChar, int lineSize){
         int size = field.length;
+        int checkedIndex = size - lineSize;
         boolean horizontalWin;
         boolean verticalWin;
         boolean principalDiagonalWin;
@@ -134,25 +143,45 @@ public class TicTacToe {
         */
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
-                horizontalWin = true;
-                verticalWin = true;
-                principalDiagonalWin = true;
-                secondaryDiagonalWin = true;
+
+                /*
+                    Инициализируем булевые переменные.
+                    если поиск для текущих X и Y валиден - ставим true.
+                    В цикле поиска если встретим запрещенный символ - ставим false
+                 */
+                horizontalWin = x <= checkedIndex;
+                verticalWin = y <= checkedIndex;
+                principalDiagonalWin = (y <= checkedIndex) && (x <= checkedIndex);
+                secondaryDiagonalWin = (y <= checkedIndex) && (x >= (lineSize - 1));
 
                 for (int l = 0; l < lineSize; l++) {
+                    //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива разом
                     //Проверка горизонтали. Перебираем все стартовые значения по Y, и только часть стартовых значений по X
-                    if ((x <= size - lineSize) && (checkingChar != field[y][x + l])) horizontalWin = false;
+                    if ((x <= checkedIndex) && (checkingChar != field[y][x + l])) horizontalWin = false;
                     //Проверка горизонтали. Перебираем часть стартовых значений по Y, и все значения по X
-                    if ((y <= size - lineSize) && (checkingChar != field[y + l][x])) verticalWin = false;
+                    if ((y <= checkedIndex) && (checkingChar != field[y + l][x])) verticalWin = false;
+                    //Проверка главной диагонали
+                    if ((y <= checkedIndex) && (x <= checkedIndex) && (checkingChar != field[y + l][x + l]))
+                        principalDiagonalWin = false;
+                    //Проверка побочной диагонали
+                    if ((y <= checkedIndex) && (x >= (lineSize - 1)) && (checkingChar != field[y + l][x - l]))
+                        secondaryDiagonalWin = false;
                 }
 
+                System.out.println("Y:" + y + " X:" + x);
+
                 //Если нашли победу - выходим и дальше не сканируем
-                if (horizontalWin||verticalWin||principalDiagonalWin||secondaryDiagonalWin) return true;
+                if (horizontalWin || verticalWin || principalDiagonalWin || secondaryDiagonalWin) {
+                    System.out.println("horizontalWin " + horizontalWin);
+                    System.out.println("verticalWin " + verticalWin);
+                    System.out.println("principalDiagonalWin " + principalDiagonalWin);
+                    System.out.println("secondaryDiagonalWin " + secondaryDiagonalWin);
+
+
+                    return true;
+                }
             }
         }
-
-
-
         return false;
     }
 
