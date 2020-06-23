@@ -129,6 +129,7 @@ public class TicTacToe {
      * @param lineSize размер непрерывной линии фишек, при достижении которой засчитывается победа
      * @return true если проверяемый игрок победил
      */
+
     public static boolean checkWin(char[][] field, char checkingChar, int lineSize){
         int size = field.length;
         int checkedIndex = size - lineSize;
