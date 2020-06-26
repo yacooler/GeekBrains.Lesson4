@@ -1,3 +1,4 @@
+import java.util.Random;
 import java.util.Scanner;
 
 
@@ -9,7 +10,9 @@ public class TicTacToe {
 
     public static void startGame(){
 
-        int FIELD_SIZE = 5;
+        //TODO: Отрефакторить, когда разрешат поля класса и классы.
+
+        int FIELD_SIZE = 7;
         int LINE_SIZE = 4;
 
         char[] CELLTYPE= {'X','O','•'};
@@ -19,45 +22,56 @@ public class TicTacToe {
 
 
         Scanner scanner = new Scanner(System.in);
+        Random random = new Random();
 
         selectPlayers(isHumanPlayer, scanner);
 
         char[][] field = new char[FIELD_SIZE][FIELD_SIZE];
         clearField(field, CELLTYPE[CELLTYPE_EMPTY]);
 
-        gameLoop(field, isHumanPlayer, LINE_SIZE, CELLTYPE, scanner);
+        gameLoop(field, isHumanPlayer, LINE_SIZE, CELLTYPE, scanner, random);
 
 
     }
 
-    public static void gameLoop(char[][] field, boolean[] isHumanPlayer, int lineSize, char[] cellType, Scanner scanner ){
+
+    public static void gameLoop(char[][] field, boolean[] isHumanPlayer, int lineSize, char[] cellType, Scanner scanner, Random random){
         int CELLTYPE_EMPTY = 2;
         int currentPlayer = 0;
+        int moveCounter = 1; //Номер хода
+        int maxMovesCount = field.length * field.length;
 
         while (true){
 
-            System.out.printf("Ход %d игрока!\n", (currentPlayer+1));
             drawField(field);
-
-            if (checkDraw(field, cellType[CELLTYPE_EMPTY])){
-                System.out.println("Ничья!");
-                break;
-            }
+            System.out.printf("======================================");
+            System.out.printf("Ход %d игрока!\n", (currentPlayer+1));
 
             if (isHumanPlayer[currentPlayer]){
                 humanMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], scanner);
             } else {
-                computerMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer]);
+                if(moveCounter <= 2){
+                    firstComputerMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], random);
+                } else {
+                    computerMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], cellType[currentPlayer == 1 ? 0 : 1], lineSize, random);
+                }
             }
 
-            if (checkWin(field, cellType[currentPlayer], lineSize)){
+            if (checkWin(field, cellType[currentPlayer], lineSize) > 0){
                 System.out.printf("Игрок %d победил!\n", (currentPlayer+1));
+                System.out.println("Победная комбинация:");
                 drawField(field);
+                break;
+            }
+
+            if (checkDraw(moveCounter, maxMovesCount)){
+                System.out.println("Ничья!");
                 break;
             }
 
             currentPlayer = currentPlayer == 1 ? 0 : 1;
 
+            moveCounter++;
         }
 
 
@@ -82,7 +96,7 @@ public class TicTacToe {
         if (isHumanPlayer[0] && isHumanPlayer[1]){
             System.out.println("По очереди вводите координаты ячеек, в которые хотите сделать ход");
         } else if (!isHumanPlayer[0] && !isHumanPlayer[1]){
-            System.out.println("Два компьютерных ИИ будут сражаться между собой. Нажимайте Enter для перехода хода от одного к другому");
+            System.out.println("Два компьютерных ИИ будут сражаться между собой");
         } else if(isHumanPlayer[0]){
             System.out.println("Игрок ходит первым, ИИ - вторым. Вводите координаты, в которые хотите поставить X");
         } else if(isHumanPlayer[1]){
@@ -131,40 +145,30 @@ public class TicTacToe {
     /**
      * Проверка игрового поля на состояние ничьей. Должна осуществляться после проверки на победу
      * т.к. проверяет только наличие свободных ячеек
-     *
-     * @param field матрица символов, содержащая игровое поле
-     * @param emptyCellChar символ по умолчанию, не являющийся фишкой первого или второго игрока
+     * @param currentMove Номер текущего хода
+     * @param maxMoves Максимальное количество возможных фишек на игровом поле
      * @return true если на игровом поле ситуация ничьей
      */
-    public static boolean checkDraw(char[][] field, char emptyCellChar){
-        int size = field.length;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (emptyCellChar == field[i][j]) return false;
-            }
-        }
-        return true;
+    public static boolean checkDraw(int currentMove, int maxMoves){
+        return currentMove >= maxMoves;
     }
 
     /**
      * Проверка, есть ли на игровой доске победная ситуация для одного или другого игрока
-     *
      * @param field матрица символов, содержащая игровое поле
      * @param checkingChar символ, являющийся фишкой игрока, победу которого мы хотим определить
      * @param lineSize размер непрерывной линии фишек, при достижении которой засчитывается победа
-     * @return true если проверяемый игрок победил
+     * @return количество победных комбинаций на поле для проверяемого игрока
      */
-    public static boolean checkWin(char[][] field, char checkingChar, int lineSize){
+    public static int checkWin(char[][] field, char checkingChar, int lineSize){
         int size = field.length;
         int checkedIndex = size - lineSize;
-        int loops = 0;
         //Переменные указывают, может ли из точки y,x теоретически быть построена выигрышная комбинация
         boolean horizontalWinPossible;
         boolean verticalWinPossible;
         boolean principalDiagonalWinPossible;
         boolean secondaryDiagonalWinPossible;
-
+        int retCount = 0;
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
 
@@ -176,26 +180,30 @@ public class TicTacToe {
                 secondaryDiagonalWinPossible = (y <= checkedIndex) && (x >= (lineSize - 1));
 
                 //l - цикл для проверки всех точек линии в 4х направлениях с начальными координатами y,x
-                for (int l = 0; l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible); l++) {
+                int l = 0;
+                while (l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
 
                     //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива в одном if
                     if (horizontalWinPossible && (checkingChar != field[y][x + l])) horizontalWinPossible = false;
-                    if (verticalWinPossible   && (checkingChar != field[y + l][x])) verticalWinPossible = false;
-                    if (principalDiagonalWinPossible  && (checkingChar != field[y + l][x + l])) principalDiagonalWinPossible = false;
-                    if (secondaryDiagonalWinPossible  && (checkingChar != field[y + l][x - l])) secondaryDiagonalWinPossible = false;
+                    if (verticalWinPossible && (checkingChar != field[y + l][x])) verticalWinPossible = false;
+                    if (principalDiagonalWinPossible && (checkingChar != field[y + l][x + l]))
+                        principalDiagonalWinPossible = false;
+                    if (secondaryDiagonalWinPossible && (checkingChar != field[y + l][x - l]))
+                        secondaryDiagonalWinPossible = false;
 
-                    loops++;
+                    l++;
                 }
                 //Победная комбинация символов в одном из направлений была достигнута
-                if (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible) {
-                    System.out.println(loops);
-                    return true;
-                }
+                if (horizontalWinPossible) retCount++;
+                if (verticalWinPossible) retCount++;
+                if (principalDiagonalWinPossible) retCount++;
+                if (secondaryDiagonalWinPossible) retCount++;
             }
         }
-        System.out.println(loops);
-        return false;
+        return retCount;
     }
+
+
 
     /**
      * Ход игрока - человека. До хода нужно проверить состояние игрового поля на ничью
@@ -226,6 +234,7 @@ public class TicTacToe {
     }
 
 
+
     /**
      * Цикл запроса координат у человека
      *
@@ -245,8 +254,268 @@ public class TicTacToe {
         }
     }
 
-
-    public static void computerMove(char[][] field, char emptyCellChar, char playerChar) {
-        //TODO: do magic
+    /**
+     * Функция клонирования матрицы (clone() пока использовать запрещено)
+     * @param matrix Исходная матрица для клонирования
+     * @return Клон исходной матрицы
+     */
+    public static char[][] cloneMatrix(char[][] matrix){
+        char[][] retMatrix = new char[matrix.length][matrix[0].length];
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                retMatrix[i][j] = matrix[i][j];
+            }
+        }
+        return retMatrix;
     }
+
+    /**
+     * Первый ход компьютера всегда осуществляется в центральные клетки доски
+     * @param field field Матрица, содержащая игровое поле
+     * @param emptyCellChar Символ, означающий незанятую клетку
+     * @param playerChar Символ - фишка, принадлежащий игроку
+     * @param random Генератор случайных чисел
+     */
+    public static void firstComputerMove(char[][] field, char emptyCellChar, char playerChar, Random random) {
+        int x;
+        int y;
+        while (true){
+            //Пытаемся занять центральную ячейку
+            x = field.length / 2;
+            y = field.length / 2;
+
+            if (field[x][y] == emptyCellChar) break;
+
+            //Если центральная ячейка занята
+            x = 1 + x  - random.nextInt(3);
+            y = 1 + y  - random.nextInt(3);
+            if (field[x][y] == emptyCellChar) break;
+        }
+        field[x][y] = playerChar;
+    }
+
+    /**
+     * Ход компьютерного оппонента с расчетом игровой позиции и установкой фишки
+     * @param field field Матрица, содержащая игровое поле
+     * @param emptyCellChar Символ, означающий незанятую клетку
+     * @param playerChar Символ - фишка, принадлежащий игроку
+     * @param random Генератор случайных чисел
+     */
+    public static void computerMove(char[][] field, char emptyCellChar, char playerChar, char opponentChar, int lineSize, Random random) {
+        int[] bestMove = miniMax(field, emptyCellChar, playerChar, playerChar, opponentChar, lineSize, 0, 0, random);
+        field[bestMove[1]][bestMove[2]] = playerChar;
+        System.out.printf("Введите X координату\n %d\nВведите Y координату\n %d\nВес хода:%d\n", bestMove[2] + 1, bestMove[1] + 1, bestMove[0]);
+    }
+
+
+    /**
+     * Установка фишки компьютерным оппонентом на поле во втором и последующих ходах
+     * @param field Матрица, содержащая игровое поле
+     * @param emptyCellChar Символ, означающий незанятую клетку
+     * @return Массив из всех доступных для установки фишки клеток. [0][0] хранит количество n, [n][0] - y, [n][1] - x
+     */
+    public static int[][] getComputerPossibleCoordinates(char[][] field, char emptyCellChar, Random random){
+        int tail = (field.length + 1) % 2;
+        int[][] retCoords = new int[field.length*field.length][2];
+        int counter = 0;
+        int i;
+        int j;
+
+
+        //Ищем место для фишки из центра по спирали
+        for (i = (field.length + 1) / 2 - 1; i >= 0; i--) {
+            for (j = 0; j < tail; j++) {
+
+                if (field[i][i+j] == emptyCellChar){
+                    counter++;
+                    retCoords[counter][0] = i;
+                    retCoords[counter][1] = i+j;
+                }
+                if (field[i+j][field.length-i-1] == emptyCellChar){
+                    counter++;
+                    retCoords[counter][0] = i+j;
+                    retCoords[counter][1] = field.length-i-1;
+                }
+                if (field[field.length-i-1][field.length-i-1-j] == emptyCellChar) {
+                    counter++;
+                    retCoords[counter][0] = field.length-i-1;
+                    retCoords[counter][1] = field.length-i-1-j;
+                }
+                if (field[field.length-i-1-j][i] == emptyCellChar) {
+                    counter++;
+                    retCoords[counter][0] = field.length-i-1-j;
+                    retCoords[counter][1] = i;
+                }
+
+            }
+            tail += 2;
+        }
+        retCoords[0][0] = counter;
+
+        //Немного рандома
+        if (counter > 10) {
+            shuffleArray(retCoords, 1, counter - 1, field.length, random);
+        }
+
+        return retCoords;
+    }
+
+    /**
+     * Функция случайной позиционной перестановки элементов матрицы int[random<->random][]
+     * @param array Матрица, элементы первой размерности которой будут случайным образом поменяны
+     * @param firstIndex Индекс первого элемента для перестановок
+     * @param lastIndex Индекс последнего элемента для перестановок
+     * @param shuffleLoops Количество перестановок
+     * @param random Генератор случайных чисел
+     */
+    public static void shuffleArray(int[][] array, int firstIndex, int lastIndex, int shuffleLoops, Random random){
+        int index1;
+        int index2;
+        int value;
+
+        for (int i = 0; i < shuffleLoops; i++) {
+            index1 = random.nextInt(lastIndex - firstIndex + 1) + firstIndex;
+            index2 = random.nextInt(lastIndex - firstIndex + 1) + firstIndex;
+            for (int j = 0; j < array[0].length; j++) {
+                value = array[index1][j];
+                array[index1][j] = array[index2][j];
+                array[index2][j] = value;
+            }
+        }
+    }
+
+
+      /**
+     *
+     * @param field Матрица, содержащая игровое поле
+     * @param playerChar Фишка текущего игрока
+     * @param opponentChar Фишка оппонента
+     * @param lineSize Размер непрерывной линии фишек, при достижении которой засчитывается победа
+     * @param score Счет на предыдущей итерации
+     * @param depth Глубина рекурсии
+     * @return Весовой коэффициент для позиции текущего игрока
+     */
+    public static int[] miniMax(char[][] field, char emptyCellChar, char checkedPlayer, char playerChar, char opponentChar, int lineSize, int score, int depth, Random random){
+        char[][][] cloneField;
+        char switchChar;
+        int[][] possibleCoordinates;
+        int MAXDEPTH = 4;
+        int bestMoveScore;
+        int bestMovePosition = 0;
+        int[] moveScore;
+        int[] retMoveCoordScore = {0,0,0};
+        int[] getMoveCoordScore;
+
+        depth++;
+
+        //Получаем список возможных ходов
+        possibleCoordinates = getComputerPossibleCoordinates(field, emptyCellChar, random);
+
+        bestMoveScore = Integer.MIN_VALUE;
+        if (possibleCoordinates[0][0] == 0){
+            retMoveCoordScore[0] = bestMoveScore;
+            System.out.println("Вернул фигню");
+            return retMoveCoordScore;
+        }
+
+        cloneField = new char[possibleCoordinates[0][0]][][];
+        moveScore = new int[possibleCoordinates[0][0]];
+
+        //Формируем список возможных полей на текущей глубине
+        for (int i = 1; i <= possibleCoordinates[0][0]; i++) {
+            cloneField[i-1] = cloneMatrix(field);
+            cloneField[i-1][possibleCoordinates[i][0]][possibleCoordinates[i][1]] = playerChar;
+            //Запомнили количество очков за расклад
+            moveScore[i-1] = getFieldScore(cloneField[i-1], checkedPlayer, playerChar, opponentChar, lineSize);
+            if (moveScore[i-1] > bestMoveScore){
+                bestMoveScore = moveScore[i-1];
+                bestMovePosition = i;
+            }
+        }
+
+        if ((depth == 1) && (bestMoveScore >= 10)){
+            //Победа, обязаны воспользоваться
+            retMoveCoordScore[0] = bestMoveScore + score;
+            retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
+            retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
+        }
+
+        if ((depth == 2) && (bestMoveScore >= 10)){
+            //Поражение, обязаны заблокировать
+            retMoveCoordScore[0] = bestMoveScore + score;
+            retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
+            retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
+        }
+
+        if (depth > 2) bestMoveScore = bestMoveScore / depth;
+        //Если лучший ход < 0 мы всё равно проигрываем, глубже смотреть смысла нет
+        //Если глубина максимальная - глубже смотреть нам запрещено
+        if (depth >= MAXDEPTH){
+            retMoveCoordScore[0] = bestMoveScore + score;
+            retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
+            retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
+
+//            if (bestMoveScore >= 10) {
+//                System.out.println("Выход по 100:" + retMoveCoordScore[1] + " " + retMoveCoordScore[2] + " Глубина " + depth);
+//            }
+            return retMoveCoordScore;
+        }
+
+        //Меняем сторону расчета
+        switchChar = playerChar;
+        playerChar = opponentChar;
+        opponentChar = switchChar;
+        //Запускаем в цикле обход каждого созданного поля с очками >= 0
+        retMoveCoordScore[0] = Integer.MIN_VALUE;
+
+        for (int i = 1; i <= possibleCoordinates[0][0]; i++) {
+            if (moveScore[i-1] < 0) continue;
+            getMoveCoordScore = miniMax(cloneField[i-1], emptyCellChar, checkedPlayer, playerChar, opponentChar, lineSize, moveScore[i-1] + score, depth, random);
+            if (getMoveCoordScore[0] > retMoveCoordScore[0]){
+                retMoveCoordScore[0] = getMoveCoordScore[0];
+                retMoveCoordScore[1] = getMoveCoordScore[1];
+                retMoveCoordScore[2] = getMoveCoordScore[2];
+            }
+        }
+
+        return retMoveCoordScore;
+    }
+
+
+    /**
+     * Функция оценки текущего состояния игрового поля
+     * @param cloneField Клон игрового поля
+     * @param checkedPlayer Фишка игрока - протагониста
+     * @param playerChar Текущий активный игрок, поставивший свою фишку и оценивающий ситуаци.
+     * @param opponentChar Оппонент, ход к которому перейдет после завершения хода активного игрока
+     * @param lineSize Размер победной линии
+     * @return Счёт для протагониста
+     */
+    public static int getFieldScore(char[][] cloneField, char checkedPlayer, char playerChar, char opponentChar, int lineSize) {
+        int retScore;
+        //Проверяем, есть ли победа в этом ходу для активного игрока
+        retScore = checkWin(cloneField, playerChar, lineSize);
+        if (retScore > 0) {
+            return 10;
+        }
+
+        //Проверяем, есть ли победа в этом ходу для неактивного игрока
+        retScore = checkWin(cloneField, opponentChar, lineSize);
+        if (retScore > 0) {
+            return 10;
+        }
+
+        //Проверяем, близка ли победа в этом ходу для активного игрока
+//        if (checkWin(cloneField, playerChar, lineSize - 1)) {
+//            return 3;
+//        }
+//
+//        //Проверяем, близка ли победа в этом ходу для неактивного игрока
+//        if (checkWin(cloneField, playerChar, lineSize - 1)) {
+//            return 3;
+//        }
+
+        return 0;
+    }
+
 }
