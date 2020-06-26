@@ -8,29 +8,31 @@ public class TicTacToe {
         startGame();
     }
 
+
+    /**
+     * Основной игровой цикл
+     */
     public static void startGame(){
 
         //TODO: Отрефакторить, когда разрешат поля класса и классы.
 
         int FIELD_SIZE = 7;
         int LINE_SIZE = 4;
-
         char[] CELLTYPE= {'X','O','•'};
         int CELLTYPE_EMPTY = 2;
 
         boolean[] isHumanPlayer = new boolean[2];
 
-
         Scanner scanner = new Scanner(System.in);
         Random random = new Random();
-
-        selectPlayers(isHumanPlayer, scanner);
-
         char[][] field = new char[FIELD_SIZE][FIELD_SIZE];
-        clearField(field, CELLTYPE[CELLTYPE_EMPTY]);
 
-        gameLoop(field, isHumanPlayer, LINE_SIZE, CELLTYPE, scanner, random);
-
+        do {
+            selectPlayers(isHumanPlayer, scanner);
+            clearField(field, CELLTYPE[CELLTYPE_EMPTY]);
+            gameLoop(field, isHumanPlayer, LINE_SIZE, CELLTYPE, scanner, random);
+            System.out.println("Хотите сыграть ещё одну игру? 1 - да, 0 - нет");
+        } while (scanner.nextInt() == 1);
 
     }
 
@@ -68,14 +70,9 @@ public class TicTacToe {
                 System.out.println("Ничья!");
                 break;
             }
-
             currentPlayer = currentPlayer == 1 ? 0 : 1;
-
             moveCounter++;
         }
-
-
-
     }
 
 
@@ -182,7 +179,6 @@ public class TicTacToe {
                 //l - цикл для проверки всех точек линии в 4х направлениях с начальными координатами y,x
                 int l = 0;
                 while (l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
-
                     //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива в одном if
                     if (horizontalWinPossible && (checkingChar != field[y][x + l])) horizontalWinPossible = false;
                     if (verticalWinPossible && (checkingChar != field[y + l][x])) verticalWinPossible = false;
@@ -190,7 +186,6 @@ public class TicTacToe {
                         principalDiagonalWinPossible = false;
                     if (secondaryDiagonalWinPossible && (checkingChar != field[y + l][x - l]))
                         secondaryDiagonalWinPossible = false;
-
                     l++;
                 }
                 //Победная комбинация символов в одном из направлений была достигнута
@@ -232,8 +227,6 @@ public class TicTacToe {
             drawField(field);
         }
     }
-
-
 
     /**
      * Цикл запроса координат у человека
@@ -304,7 +297,7 @@ public class TicTacToe {
     public static void computerMove(char[][] field, char emptyCellChar, char playerChar, char opponentChar, int lineSize, Random random) {
         int[] bestMove = miniMax(field, emptyCellChar, playerChar, playerChar, opponentChar, lineSize, 0, 0, random);
         field[bestMove[1]][bestMove[2]] = playerChar;
-        System.out.printf("Введите X координату\n %d\nВведите Y координату\n %d\nВес хода:%d\n", bestMove[2] + 1, bestMove[1] + 1, bestMove[0]);
+        System.out.printf("Введите X координату\n %d\nВведите Y координату\n %d\n", bestMove[2] + 1, bestMove[1] + 1);
     }
 
 
@@ -399,7 +392,7 @@ public class TicTacToe {
         char[][][] cloneField;
         char switchChar;
         int[][] possibleCoordinates;
-        int MAXDEPTH = 4;
+        int MAXDEPTH = 2;
         int bestMoveScore;
         int bestMovePosition = 0;
         int[] moveScore;
@@ -413,8 +406,8 @@ public class TicTacToe {
 
         bestMoveScore = Integer.MIN_VALUE;
         if (possibleCoordinates[0][0] == 0){
+            //Тут ничья
             retMoveCoordScore[0] = bestMoveScore;
-            System.out.println("Вернул фигню");
             return retMoveCoordScore;
         }
 
@@ -433,21 +426,20 @@ public class TicTacToe {
             }
         }
 
-        if ((depth == 1) && (bestMoveScore >= 10)){
+        if ((depth == 1) && (bestMoveScore >= 1)){
             //Победа, обязаны воспользоваться
             retMoveCoordScore[0] = bestMoveScore + score;
             retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
             retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
         }
 
-        if ((depth == 2) && (bestMoveScore >= 10)){
+        if ((depth == 2) && (bestMoveScore >= 1)){
             //Поражение, обязаны заблокировать
             retMoveCoordScore[0] = bestMoveScore + score;
             retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
             retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
         }
 
-        if (depth > 2) bestMoveScore = bestMoveScore / depth;
         //Если лучший ход < 0 мы всё равно проигрываем, глубже смотреть смысла нет
         //Если глубина максимальная - глубже смотреть нам запрещено
         if (depth >= MAXDEPTH){
@@ -455,9 +447,6 @@ public class TicTacToe {
             retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
             retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
 
-//            if (bestMoveScore >= 10) {
-//                System.out.println("Выход по 100:" + retMoveCoordScore[1] + " " + retMoveCoordScore[2] + " Глубина " + depth);
-//            }
             return retMoveCoordScore;
         }
 
@@ -496,24 +485,14 @@ public class TicTacToe {
         //Проверяем, есть ли победа в этом ходу для активного игрока
         retScore = checkWin(cloneField, playerChar, lineSize);
         if (retScore > 0) {
-            return 10;
+            return 1;
         }
 
         //Проверяем, есть ли победа в этом ходу для неактивного игрока
         retScore = checkWin(cloneField, opponentChar, lineSize);
         if (retScore > 0) {
-            return 10;
+            return 1;
         }
-
-        //Проверяем, близка ли победа в этом ходу для активного игрока
-//        if (checkWin(cloneField, playerChar, lineSize - 1)) {
-//            return 3;
-//        }
-//
-//        //Проверяем, близка ли победа в этом ходу для неактивного игрока
-//        if (checkWin(cloneField, playerChar, lineSize - 1)) {
-//            return 3;
-//        }
 
         return 0;
     }
