@@ -165,39 +165,73 @@ public class TicTacToe {
         boolean verticalWinPossible;
         boolean principalDiagonalWinPossible;
         boolean secondaryDiagonalWinPossible;
+        char gapChar = '•';
         int retCount = 0;
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
 
                 //Если поиск для текущих X и Y для выбранного направления валиден - ставим true
-                //Поиск идет вниз, вправо, влево вниз и вправо вниз от точки y,x
-                horizontalWinPossible = x <= checkedIndex;
-                verticalWinPossible = y <= checkedIndex;
-                principalDiagonalWinPossible = (y <= checkedIndex) && (x <= checkedIndex);
-                secondaryDiagonalWinPossible = (y <= checkedIndex) && (x >= (lineSize - 1));
+                horizontalWinPossible        = (x <= checkedIndex);
+                verticalWinPossible          = (y <= checkedIndex);
+                principalDiagonalWinPossible = (x <= checkedIndex && y <= checkedIndex);
+                secondaryDiagonalWinPossible = (x >= lineSize - 1) && (y <= checkedIndex);
 
-                //l - цикл для проверки всех точек линии в 4х направлениях с начальными координатами y,x
-                int l = 0;
-                while (l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
-                    //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива в одном if
-                    if (horizontalWinPossible && (checkingChar != field[y][x + l])) horizontalWinPossible = false;
-                    if (verticalWinPossible && (checkingChar != field[y + l][x])) verticalWinPossible = false;
-                    if (principalDiagonalWinPossible && (checkingChar != field[y + l][x + l]))
-                        principalDiagonalWinPossible = false;
-                    if (secondaryDiagonalWinPossible && (checkingChar != field[y + l][x - l]))
-                        secondaryDiagonalWinPossible = false;
-                    l++;
-                }
-                //Победная комбинация символов в одном из направлений была достигнута
-                if (horizontalWinPossible) retCount++;
-                if (verticalWinPossible) retCount++;
-                if (principalDiagonalWinPossible) retCount++;
-                if (secondaryDiagonalWinPossible) retCount++;
+
+                retCount += getWinCombinationCount(field, gapChar, checkingChar, lineSize, 0, horizontalWinPossible,
+                        verticalWinPossible, principalDiagonalWinPossible, secondaryDiagonalWinPossible, y, x);
             }
         }
         return retCount;
     }
 
+    /**
+     * Вычисляет количество выигрышных ситуаций для части игрового поля - матрицы,
+     * начальными координатами которой на поле являются y,x и конечными y + lineSize - 1, x + lineSize - 1
+     * @param field Матрица, содержащая игровое поле
+     * @param emptyCellChar символ, означающий незанятую клетку
+     * @param checkingChar символ, являющийся фишкой игрока, победу которого мы хотим определить
+     * @param lineSize размер непрерывной линии фишек, при достижении которой засчитывается победа
+     * @param gapCount Допустимое количество замен фишек игрока на пустые клетки
+     * @param horizontalWinPossible для данных y,x доступна проверка по горизонтали
+     * @param verticalWinPossible для данных y,x досиупна проверка по вертикали
+     * @param principalDiagonalWinPossible для данных y,x доступна проверка главной диагонали
+     * @param secondaryDiagonalWinPossible для данных y,x доступна проверка побочной диагонали
+     * @param y начальная координата по вертикали
+     * @param x начальная координата по горизонтали
+     * @return количество победных комбинаций для  для проверяемого игрока
+     */
+    public static int getWinCombinationCount(char[][] field, char emptyCellChar, char checkingChar,  int lineSize, int gapCount,
+                                             boolean horizontalWinPossible,
+                                             boolean verticalWinPossible,
+                                             boolean principalDiagonalWinPossible,
+                                             boolean secondaryDiagonalWinPossible,
+                                             int y, int x) {
+
+        int l  = 0;
+        int retCount = 0;
+        int horizontalGapCount = gapCount;
+        int verticalGapCount = gapCount;
+        int principalDiagonalGapCount = gapCount;
+        int secondaryDiagonalGapCount = gapCount;
+
+        //l - цикл для проверки всех точек линии в 4х направлениях с начальными координатами y,x
+        while (l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
+            //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива в одном if
+            if (horizontalWinPossible && (checkingChar != field[y][x + l])) horizontalWinPossible = false;
+            if (verticalWinPossible && (checkingChar != field[y + l][x])) verticalWinPossible = false;
+            if (principalDiagonalWinPossible && (checkingChar != field[y + l][x + l]))
+                principalDiagonalWinPossible = false;
+            if (secondaryDiagonalWinPossible && (checkingChar != field[y + l][x - l]))
+                secondaryDiagonalWinPossible = false;
+            l++;
+        }
+        //Победная комбинация символов в одном из направлений была достигнута
+        if (horizontalWinPossible) retCount++;
+        if (verticalWinPossible) retCount++;
+        if (principalDiagonalWinPossible) retCount++;
+        if (secondaryDiagonalWinPossible) retCount++;
+        return retCount;
+    }
 
 
     /**
@@ -392,7 +426,7 @@ public class TicTacToe {
         char[][][] cloneField;
         char switchChar;
         int[][] possibleCoordinates;
-        int MAXDEPTH = 2;
+        int MAXDEPTH = 4;
         int bestMoveScore;
         int bestMovePosition = 0;
         int[] moveScore;
@@ -426,27 +460,12 @@ public class TicTacToe {
             }
         }
 
-        if ((depth == 1) && (bestMoveScore >= 1)){
-            //Победа, обязаны воспользоваться
-            retMoveCoordScore[0] = bestMoveScore + score;
-            retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
-            retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
-        }
-
-        if ((depth == 2) && (bestMoveScore >= 1)){
-            //Поражение, обязаны заблокировать
-            retMoveCoordScore[0] = bestMoveScore + score;
-            retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
-            retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
-        }
-
         //Если лучший ход < 0 мы всё равно проигрываем, глубже смотреть смысла нет
         //Если глубина максимальная - глубже смотреть нам запрещено
-        if (depth >= MAXDEPTH){
+        if (depth >= MAXDEPTH || (depth <= 2) && (bestMoveScore >= 1)){
             retMoveCoordScore[0] = bestMoveScore + score;
             retMoveCoordScore[1] = possibleCoordinates[bestMovePosition][0];
             retMoveCoordScore[2] = possibleCoordinates[bestMovePosition][1];
-
             return retMoveCoordScore;
         }
 
