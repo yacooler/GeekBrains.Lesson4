@@ -4,65 +4,76 @@ import java.util.Scanner;
 
 public class TicTacToe {
 
+    final int FIELD_SIZE = 7;
+    final int LINE_SIZE = 4;
+    final char[] CELLTYPE= {'X','O','•'};
+    final int CELLTYPE_EMPTY = 2;
+
+
+    boolean[] isHumanPlayer;
+    char[][] field;
+    int currentPlayer;
+    int moveCounter;
+    int maxMovesCount;
+
+    Scanner scanner = new Scanner(System.in);
+    Random random = new Random();
+
     public static void main(String[] args) {
-        startGame();
+
+        TicTacToe game = new TicTacToe();
+        game.startGame();
+
     }
 
 
     /**
      * Основной игровой цикл
      */
-    public static void startGame(){
+    public void startGame(){
 
         //TODO: Отрефакторить, когда разрешат поля класса и классы.
 
-        int FIELD_SIZE = 7;
-        int LINE_SIZE = 4;
-        char[] CELLTYPE= {'X','O','•'};
-        int CELLTYPE_EMPTY = 2;
+        isHumanPlayer = new boolean[2];
 
-        boolean[] isHumanPlayer = new boolean[2];
-
-        Scanner scanner = new Scanner(System.in);
-        Random random = new Random();
-        char[][] field = new char[FIELD_SIZE][FIELD_SIZE];
+        field = new char[FIELD_SIZE][FIELD_SIZE];
 
         do {
-            selectPlayers(isHumanPlayer, scanner);
-            clearField(field, CELLTYPE[CELLTYPE_EMPTY]);
-            gameLoop(field, isHumanPlayer, LINE_SIZE, CELLTYPE, scanner, random);
+            selectPlayers();
+            clearField();
+            gameLoop();
             System.out.println("Хотите сыграть ещё одну игру? 1 - да, 0 - нет");
         } while (scanner.nextInt() == 1);
 
     }
 
 
-    public static void gameLoop(char[][] field, boolean[] isHumanPlayer, int lineSize, char[] cellType, Scanner scanner, Random random){
-        int CELLTYPE_EMPTY = 2;
-        int currentPlayer = 0;
-        int moveCounter = 1; //Номер хода
-        int maxMovesCount = field.length * field.length;
+    public void gameLoop(){
+
+        currentPlayer = 0;
+        moveCounter = 1; //Номер хода
+        maxMovesCount = field.length * field.length;
 
         while (true){
 
-            drawField(field);
-            System.out.printf("======================================");
+            drawField();
+            System.out.print("======================================");
             System.out.printf("Ход %d игрока!\n", (currentPlayer+1));
 
             if (isHumanPlayer[currentPlayer]){
-                humanMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], scanner);
+                humanMove(CELLTYPE[currentPlayer]);
             } else {
                 if(moveCounter <= 2){
-                    firstComputerMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], random);
+                    firstComputerMove(CELLTYPE[currentPlayer]);
                 } else {
-                    computerMove(field, cellType[CELLTYPE_EMPTY], cellType[currentPlayer], cellType[currentPlayer == 1 ? 0 : 1], lineSize, random);
+                    computerMove(CELLTYPE[currentPlayer], CELLTYPE[currentPlayer == 1 ? 0 : 1]);
                 }
             }
 
-            if (checkWin(field, cellType[currentPlayer], lineSize) > 0){
+            if (checkWin(field, CELLTYPE[currentPlayer]) > 0){
                 System.out.printf("Игрок %d победил!\n", (currentPlayer+1));
                 System.out.println("Победная комбинация:");
-                drawField(field);
+                drawField();
                 break;
             }
 
@@ -78,10 +89,8 @@ public class TicTacToe {
 
     /**
      * Выбор типа игрока - человек true, компьютерный оппонент - false
-     * @param isHumanPlayer массив, содержащий признак игрока - человека
-     * @param scanner сканер для ввода данных
      */
-    public static void selectPlayers(boolean[] isHumanPlayer, Scanner scanner){
+    public void selectPlayers(){
         //Для большего количества можно было бы использовать цикл
         System.out.println("Введите тип первого и второго игрока");
         System.out.println("Первый игрок - человек или ИИ? 1 - человек, 2 - ИИ");
@@ -104,14 +113,12 @@ public class TicTacToe {
 
     /**
      * Очистка игрового поля - заполнение символом по умолчанию
-     * @param field матрица символов, содержащая игровое поле
-     * @param cellType символ по умолчанию, не являющийся фишкой первого или второго игрока
      */
-    public static void clearField(char[][] field, char cellType) {
+    public void clearField() {
         int size = field.length;
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                field[i][j] = cellType;
+                field[i][j] = CELLTYPE[CELLTYPE_EMPTY];
             }
         }
     }
@@ -119,20 +126,18 @@ public class TicTacToe {
 
     /**
      * Печать поля field на экран
-     * @param field матрица символов, содержащая игровое поле
      */
-    public static void drawField(char[][] field){
-        int size = field.length;
+    public void drawField(){
 
         System.out.print(" ");
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < FIELD_SIZE; i++) {
             System.out.print(" " + (i+1) + " ");
         }
         System.out.println();
 
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < FIELD_SIZE; i++) {
             System.out.print(i+1);
-            for (int j = 0; j < size; j++) {
+            for (int j = 0; j < FIELD_SIZE; j++) {
                 System.out.print(" " + field[i][j] + " ");
             }
             System.out.println();
@@ -152,32 +157,30 @@ public class TicTacToe {
 
     /**
      * Проверка, есть ли на игровой доске победная ситуация для одного или другого игрока
-     * @param field матрица символов, содержащая игровое поле
+     * @param fieldToCheck матрица символов, содержащая игровое поле
      * @param checkingChar символ, являющийся фишкой игрока, победу которого мы хотим определить
-     * @param lineSize размер непрерывной линии фишек, при достижении которой засчитывается победа
      * @return количество победных комбинаций на поле для проверяемого игрока
      */
-    public static int checkWin(char[][] field, char checkingChar, int lineSize){
-        int size = field.length;
-        int checkedIndex = size - lineSize;
+    public int checkWin(char[][] fieldToCheck, char checkingChar){
+        int checkedIndex = FIELD_SIZE - LINE_SIZE;
         //Переменные указывают, может ли из точки y,x теоретически быть построена выигрышная комбинация
         boolean horizontalWinPossible;
         boolean verticalWinPossible;
         boolean principalDiagonalWinPossible;
         boolean secondaryDiagonalWinPossible;
-        char gapChar = '•';
+
         int retCount = 0;
-        for (int y = 0; y < size; y++) {
-            for (int x = 0; x < size; x++) {
+        for (int y = 0; y < FIELD_SIZE; y++) {
+            for (int x = 0; x < FIELD_SIZE; x++) {
 
                 //Если поиск для текущих X и Y для выбранного направления валиден - ставим true
                 horizontalWinPossible        = (x <= checkedIndex);
                 verticalWinPossible          = (y <= checkedIndex);
                 principalDiagonalWinPossible = (x <= checkedIndex && y <= checkedIndex);
-                secondaryDiagonalWinPossible = (x >= lineSize - 1) && (y <= checkedIndex);
+                secondaryDiagonalWinPossible = (x >= LINE_SIZE - 1) && (y <= checkedIndex);
 
 
-                retCount += getWinCombinationCount(field, gapChar, checkingChar, lineSize, 0, horizontalWinPossible,
+                retCount += getWinCombinationCount(fieldToCheck, checkingChar, 0, horizontalWinPossible,
                         verticalWinPossible, principalDiagonalWinPossible, secondaryDiagonalWinPossible, y, x);
             }
         }
@@ -187,10 +190,8 @@ public class TicTacToe {
     /**
      * Вычисляет количество выигрышных ситуаций для части игрового поля - матрицы,
      * начальными координатами которой на поле являются y,x и конечными y + lineSize - 1, x + lineSize - 1
-     * @param field Матрица, содержащая игровое поле
-     * @param emptyCellChar символ, означающий незанятую клетку
+     * @param fieldToCheck Матрица, содержащая игровое поле
      * @param checkingChar символ, являющийся фишкой игрока, победу которого мы хотим определить
-     * @param lineSize размер непрерывной линии фишек, при достижении которой засчитывается победа
      * @param gapCount Допустимое количество замен фишек игрока на пустые клетки
      * @param horizontalWinPossible для данных y,x доступна проверка по горизонтали
      * @param verticalWinPossible для данных y,x досиупна проверка по вертикали
@@ -200,7 +201,7 @@ public class TicTacToe {
      * @param x начальная координата по горизонтали
      * @return количество победных комбинаций для  для проверяемого игрока
      */
-    public static int getWinCombinationCount(char[][] field, char emptyCellChar, char checkingChar,  int lineSize, int gapCount,
+    public int getWinCombinationCount(char[][] fieldToCheck, char checkingChar,  int gapCount,
                                              boolean horizontalWinPossible,
                                              boolean verticalWinPossible,
                                              boolean principalDiagonalWinPossible,
@@ -215,13 +216,13 @@ public class TicTacToe {
         int secondaryDiagonalGapCount = gapCount;
 
         //l - цикл для проверки всех точек линии в 4х направлениях с начальными координатами y,x
-        while (l < lineSize && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
+        while (l < LINE_SIZE && (horizontalWinPossible || verticalWinPossible || principalDiagonalWinPossible || secondaryDiagonalWinPossible)) {
             //Помним, что операции сравнения - ленивые. Можно проверять выход за границы массива и элемент массива в одном if
-            if (horizontalWinPossible && (checkingChar != field[y][x + l])) horizontalWinPossible = false;
-            if (verticalWinPossible && (checkingChar != field[y + l][x])) verticalWinPossible = false;
-            if (principalDiagonalWinPossible && (checkingChar != field[y + l][x + l]))
+            if (horizontalWinPossible && (checkingChar != fieldToCheck[y][x + l])) horizontalWinPossible = false;
+            if (verticalWinPossible && (checkingChar != fieldToCheck[y + l][x])) verticalWinPossible = false;
+            if (principalDiagonalWinPossible && (checkingChar != fieldToCheck[y + l][x + l]))
                 principalDiagonalWinPossible = false;
-            if (secondaryDiagonalWinPossible && (checkingChar != field[y + l][x - l]))
+            if (secondaryDiagonalWinPossible && (checkingChar != fieldToCheck[y + l][x - l]))
                 secondaryDiagonalWinPossible = false;
             l++;
         }
@@ -236,45 +237,40 @@ public class TicTacToe {
 
     /**
      * Ход игрока - человека. До хода нужно проверить состояние игрового поля на ничью
-     * @param field Матрица, содержащая игровое поле
-     * @param emptyCellChar Символ, означающий незанятую клетку
      * @param playerChar Символ - фишка, принадлежащий игроку
      */
-    public static void humanMove(char[][] field, char emptyCellChar, char playerChar, Scanner scanner){
+    public void humanMove(char playerChar){
         int x;
         int y;
-        int size = field.length;
 
         while (true) {
             System.out.println("Введите X координату");
-            x = humanInputCoordinate(field, scanner);
+            x = humanInputCoordinate();
 
             System.out.println("Введите Y координату");
-            y = humanInputCoordinate(field, scanner);
+            y = humanInputCoordinate();
 
-            if (field[y-1][x-1] == emptyCellChar){
+            if (field[y-1][x-1] == CELLTYPE[CELLTYPE_EMPTY]){
                 field[y-1][x-1] = playerChar;
                 return;
             }
 
             System.out.printf("Клетка для установки [%s] должна быть свободна\n", playerChar);
-            drawField(field);
+            drawField();
         }
     }
 
     /**
      * Цикл запроса координат у человека
      *
-     * @param field Матрица, содержащая игровое поле
-     * @param scanner сканер для ввода данных
      * @return Координата, введенная пользователем
      */
-    public static int humanInputCoordinate(char[][] field, Scanner scanner){
+    public int humanInputCoordinate(){
         int coord;
         while (true){
             coord = scanner.nextInt();
-            if (coord < 1 || coord > field.length){
-                System.out.printf("Значение должно лежать в диапазоне от 1 до %d\n Введите значение:", field.length);
+            if (coord < 1 || coord > FIELD_SIZE){
+                System.out.printf("Значение должно лежать в диапазоне от 1 до %d\n Введите значение:", FIELD_SIZE);
             } else {
                 return coord;
             }
@@ -298,38 +294,32 @@ public class TicTacToe {
 
     /**
      * Первый ход компьютера всегда осуществляется в центральные клетки доски
-     * @param field field Матрица, содержащая игровое поле
-     * @param emptyCellChar Символ, означающий незанятую клетку
      * @param playerChar Символ - фишка, принадлежащий игроку
-     * @param random Генератор случайных чисел
      */
-    public static void firstComputerMove(char[][] field, char emptyCellChar, char playerChar, Random random) {
+    public void firstComputerMove(char playerChar) {
         int x;
         int y;
         while (true){
             //Пытаемся занять центральную ячейку
-            x = field.length / 2;
-            y = field.length / 2;
+            x = FIELD_SIZE / 2;
+            y = FIELD_SIZE / 2;
 
-            if (field[x][y] == emptyCellChar) break;
+            if (field[x][y] == CELLTYPE[CELLTYPE_EMPTY]) break;
 
             //Если центральная ячейка занята
             x = 1 + x  - random.nextInt(3);
             y = 1 + y  - random.nextInt(3);
-            if (field[x][y] == emptyCellChar) break;
+            if (field[x][y] == CELLTYPE[CELLTYPE_EMPTY]) break;
         }
         field[x][y] = playerChar;
     }
 
     /**
      * Ход компьютерного оппонента с расчетом игровой позиции и установкой фишки
-     * @param field field Матрица, содержащая игровое поле
-     * @param emptyCellChar Символ, означающий незанятую клетку
      * @param playerChar Символ - фишка, принадлежащий игроку
-     * @param random Генератор случайных чисел
      */
-    public static void computerMove(char[][] field, char emptyCellChar, char playerChar, char opponentChar, int lineSize, Random random) {
-        int[] bestMove = miniMax(field, emptyCellChar, playerChar, playerChar, opponentChar, lineSize, 0, 0, random);
+    public void computerMove(char playerChar, char opponentChar) {
+        int[] bestMove = miniMax(field, playerChar, playerChar, opponentChar, 0, 0);
         field[bestMove[1]][bestMove[2]] = playerChar;
         System.out.printf("Введите X координату\n %d\nВведите Y координату\n %d\n", bestMove[2] + 1, bestMove[1] + 1);
     }
@@ -337,40 +327,39 @@ public class TicTacToe {
 
     /**
      * Установка фишки компьютерным оппонентом на поле во втором и последующих ходах
-     * @param field Матрица, содержащая игровое поле
-     * @param emptyCellChar Символ, означающий незанятую клетку
+     * @param fieldToCheck Матрица, содержащая игровое поле
      * @return Массив из всех доступных для установки фишки клеток. [0][0] хранит количество n, [n][0] - y, [n][1] - x
      */
-    public static int[][] getComputerPossibleCoordinates(char[][] field, char emptyCellChar, Random random){
-        int tail = (field.length + 1) % 2;
-        int[][] retCoords = new int[field.length*field.length][2];
+    public int[][] getComputerPossibleCoordinates(char[][] fieldToCheck){
+        int tail = (FIELD_SIZE + 1) % 2;
+        int[][] retCoords = new int[FIELD_SIZE*FIELD_SIZE][2];
         int counter = 0;
         int i;
         int j;
 
 
         //Ищем место для фишки из центра по спирали
-        for (i = (field.length + 1) / 2 - 1; i >= 0; i--) {
+        for (i = (fieldToCheck.length + 1) / 2 - 1; i >= 0; i--) {
             for (j = 0; j < tail; j++) {
 
-                if (field[i][i+j] == emptyCellChar){
+                if (fieldToCheck[i][i+j] == CELLTYPE[CELLTYPE_EMPTY]){
                     counter++;
                     retCoords[counter][0] = i;
                     retCoords[counter][1] = i+j;
                 }
-                if (field[i+j][field.length-i-1] == emptyCellChar){
+                if (fieldToCheck[i+j][fieldToCheck.length-i-1] == CELLTYPE[CELLTYPE_EMPTY]){
                     counter++;
                     retCoords[counter][0] = i+j;
-                    retCoords[counter][1] = field.length-i-1;
+                    retCoords[counter][1] = fieldToCheck.length-i-1;
                 }
-                if (field[field.length-i-1][field.length-i-1-j] == emptyCellChar) {
+                if (fieldToCheck[fieldToCheck.length-i-1][fieldToCheck.length-i-1-j] == CELLTYPE[CELLTYPE_EMPTY]) {
                     counter++;
-                    retCoords[counter][0] = field.length-i-1;
-                    retCoords[counter][1] = field.length-i-1-j;
+                    retCoords[counter][0] = fieldToCheck.length-i-1;
+                    retCoords[counter][1] = fieldToCheck.length-i-1-j;
                 }
-                if (field[field.length-i-1-j][i] == emptyCellChar) {
+                if (fieldToCheck[fieldToCheck.length-i-1-j][i] == CELLTYPE[CELLTYPE_EMPTY]) {
                     counter++;
-                    retCoords[counter][0] = field.length-i-1-j;
+                    retCoords[counter][0] = fieldToCheck.length-i-1-j;
                     retCoords[counter][1] = i;
                 }
 
@@ -381,7 +370,7 @@ public class TicTacToe {
 
         //Немного рандома
         if (counter > 10) {
-            shuffleArray(retCoords, 1, counter - 1, field.length, random);
+            shuffleArray(retCoords, 1, counter - 1, fieldToCheck.length, random);
         }
 
         return retCoords;
@@ -414,15 +403,14 @@ public class TicTacToe {
 
       /**
      *
-     * @param field Матрица, содержащая игровое поле
+     * @param fieldToCheck Матрица, содержащая игровое поле
      * @param playerChar Фишка текущего игрока
      * @param opponentChar Фишка оппонента
-     * @param lineSize Размер непрерывной линии фишек, при достижении которой засчитывается победа
      * @param score Счет на предыдущей итерации
      * @param depth Глубина рекурсии
      * @return Весовой коэффициент для позиции текущего игрока
      */
-    public static int[] miniMax(char[][] field, char emptyCellChar, char checkedPlayer, char playerChar, char opponentChar, int lineSize, int score, int depth, Random random){
+    public int[] miniMax(char[][] fieldToCheck, char checkedPlayer, char playerChar, char opponentChar, int score, int depth){
         char[][][] cloneField;
         char switchChar;
         int[][] possibleCoordinates;
@@ -436,7 +424,7 @@ public class TicTacToe {
         depth++;
 
         //Получаем список возможных ходов
-        possibleCoordinates = getComputerPossibleCoordinates(field, emptyCellChar, random);
+        possibleCoordinates = getComputerPossibleCoordinates(fieldToCheck);
 
         bestMoveScore = Integer.MIN_VALUE;
         if (possibleCoordinates[0][0] == 0){
@@ -450,10 +438,10 @@ public class TicTacToe {
 
         //Формируем список возможных полей на текущей глубине
         for (int i = 1; i <= possibleCoordinates[0][0]; i++) {
-            cloneField[i-1] = cloneMatrix(field);
+            cloneField[i-1] = cloneMatrix(fieldToCheck);
             cloneField[i-1][possibleCoordinates[i][0]][possibleCoordinates[i][1]] = playerChar;
             //Запомнили количество очков за расклад
-            moveScore[i-1] = getFieldScore(cloneField[i-1], checkedPlayer, playerChar, opponentChar, lineSize);
+            moveScore[i-1] = getFieldScore(cloneField[i-1], checkedPlayer, playerChar, opponentChar);
             if (moveScore[i-1] > bestMoveScore){
                 bestMoveScore = moveScore[i-1];
                 bestMovePosition = i;
@@ -478,7 +466,7 @@ public class TicTacToe {
 
         for (int i = 1; i <= possibleCoordinates[0][0]; i++) {
             if (moveScore[i-1] < 0) continue;
-            getMoveCoordScore = miniMax(cloneField[i-1], emptyCellChar, checkedPlayer, playerChar, opponentChar, lineSize, moveScore[i-1] + score, depth, random);
+            getMoveCoordScore = miniMax(cloneField[i-1], checkedPlayer, playerChar, opponentChar,moveScore[i-1] + score, depth);
             if (getMoveCoordScore[0] > retMoveCoordScore[0]){
                 retMoveCoordScore[0] = getMoveCoordScore[0];
                 retMoveCoordScore[1] = getMoveCoordScore[1];
@@ -492,23 +480,22 @@ public class TicTacToe {
 
     /**
      * Функция оценки текущего состояния игрового поля
-     * @param cloneField Клон игрового поля
+     * @param fieldToCheck Клон игрового поля
      * @param checkedPlayer Фишка игрока - протагониста
      * @param playerChar Текущий активный игрок, поставивший свою фишку и оценивающий ситуаци.
      * @param opponentChar Оппонент, ход к которому перейдет после завершения хода активного игрока
-     * @param lineSize Размер победной линии
      * @return Счёт для протагониста
      */
-    public static int getFieldScore(char[][] cloneField, char checkedPlayer, char playerChar, char opponentChar, int lineSize) {
+    public int getFieldScore(char[][] fieldToCheck, char checkedPlayer, char playerChar, char opponentChar) {
         int retScore;
         //Проверяем, есть ли победа в этом ходу для активного игрока
-        retScore = checkWin(cloneField, playerChar, lineSize);
+        retScore = checkWin(fieldToCheck, playerChar);
         if (retScore > 0) {
             return 1;
         }
 
         //Проверяем, есть ли победа в этом ходу для неактивного игрока
-        retScore = checkWin(cloneField, opponentChar, lineSize);
+        retScore = checkWin(fieldToCheck, opponentChar);
         if (retScore > 0) {
             return 1;
         }
